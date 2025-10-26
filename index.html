@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Museo Virtual de Nicaragua</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        /* Transición suave para el contenido que aparece */
+        .content-section {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            animation: fadeIn 0.7s forwards;
+        }
+        .content-section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Estilos para el menú desplegable (controlado por JS) */
+        .dropdown-menu {
+            display: none;
+            transform-origin: top center;
+            animation: slideDown 0.3s ease-out forwards;
+        }
+        .dropdown-menu.open {
+            display: block;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: scaleY(0.95) translateY(-10px); }
+            to { opacity: 1; transform: scaleY(1) translateY(0); }
+        }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0; /* slate-200 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #0056b3;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #004494;
+        }
+        /* Estilo para la sección de bienvenida (hero) - CON GRADIENTE VERTICAL */
+        .hero-section {
+            /* Se eliminó background-image y linear-gradient oscuro */
+            /* Cambiado a gradiente vertical blanco-azul-blanco */
+            background: linear-gradient(to bottom,
+                #ffffff 0%,        /* Blanco inicio */
+                #ffffff 30%,       /* Blanco fin */
+                #2563eb 30%,       /* Azul inicio (blue-600) */
+                #2563eb 70%,       /* Azul fin */
+                #ffffff 70%,       /* Blanco inicio */
+                #ffffff 100%       /* Blanco fin */
+            );
+            background-size: 100% 100%; /* Asegura que cubra todo el div */
+            background-position: center;
+        }
+        /* Placeholder for video & image */
+        .media-placeholder {
+            background-color: #e2e8f0; /* slate-200 */
+            border: 1px solid #cbd5e1; /* slate-300 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 16 / 9; /* Common video aspect ratio */
+            position: relative;
+            color: #64748b; /* slate-500 */
+            font-size: 0.8rem;
+        }
+        .video-placeholder::before {
+            content: '▶'; /* Play icon */
+            font-size: 3rem;
+            position: absolute;
+        }
+         .video-placeholder::after {
+            content: 'Video Placeholder';
+            position: absolute;
+            bottom: 10px;
+         }
+         .image-placeholder::before {
+             content: '🖼️'; /* Image icon */
+             font-size: 2.5rem;
+             position: absolute;
+         }
+         .image-placeholder::after {
+             content: 'Image Placeholder';
+             position: absolute;
+             bottom: 10px;
+         }
+         /* Grid layout for Feriados */
+        .feriado-item {
+            display: grid;
+            grid-template-columns: 1fr; /* Default to single column */
+            gap: 1rem;
+            align-items: start;
+        }
+        @media (min-width: 768px) { /* On medium screens and up, use two columns */
+            .feriado-item {
+                grid-template-columns: 150px 1fr; /* Fixed width for image, rest for text */
+            }
+        }
+
+    </style>
+</head>
+<body class="text-slate-700">
+
+    <!-- Header y Menú de Navegación -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#" class="text-2xl font-extrabold text-blue-800" id="home-link">
+                MVN
+                <span class="font-semibold text-slate-600 text-xl hidden sm:inline">Museo Virtual de Nicaragua</span>
+            </a>
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="#" class="text-slate-600 hover:text-blue-700 transition-colors duration-300 font-semibold nav-link" data-section="inicio">Inicio</a>
+                <a href="#" class="text-slate-600 hover:text-blue-700 transition-colors duration-300 font-semibold nav-link" data-section="historia">Historia</a>
+                <a href="#" class="text-slate-600 hover:text-blue-700 transition-colors duration-300 font-semibold nav-link" data-section="presidentes">Presidentes</a>
+                <a href="#" class="text-slate-600 hover:text-blue-700 transition-colors duration-300 font-semibold nav-link" data-section="feriados">Feriados</a>
+                <a href="#" class="text-slate-600 hover:text-blue-700 transition-colors duration-300 font-semibold nav-link" data-section="videos">Videos</a>
+                <div class="relative dropdown">
+                    <button id="dropdown-button" class="text-slate-600 hover:text-blue-700 transition-colors duration-300 font-semibold focus:outline-none flex items-center">
+                        Departamentos
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="dropdown-menu" class="dropdown-menu absolute right-0 mt-2 py-2 w-56 bg-white rounded-lg shadow-xl max-h-96 overflow-y-auto">
+                        <!-- Lista de departamentos se insertará aquí -->
+                    </div>
+                </div>
+                <!-- Logo añadido aquí -->
+                <img src="https://uml.edu.ni/wp-content/uploads/2023/07/sede-masaya-portada-300x300.png" alt="Logo UML Sede Masaya" class="h-8 w-auto ml-4" onerror="this.style.display='none'">
+            </div>
+            <!-- Botón de Menú Móvil -->
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-slate-800 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </nav>
+        <!-- Menú Móvil Desplegable -->
+        <div id="mobile-menu" class="hidden md:hidden px-6 pb-4 border-t border-slate-200">
+             <a href="#" class="block py-2 text-slate-600 hover:text-blue-700 font-semibold nav-link" data-section="inicio">Inicio</a>
+             <a href="#" class="block py-2 text-slate-600 hover:text-blue-700 font-semibold nav-link" data-section="historia">Historia</a>
+             <a href="#" class="block py-2 text-slate-600 hover:text-blue-700 font-semibold nav-link" data-section="presidentes">Presidentes</a>
+             <a href="#" class="block py-2 text-slate-600 hover:text-blue-700 font-semibold nav-link" data-section="feriados">Feriados</a>
+             <a href="#" class="block py-2 text-slate-600 hover:text-blue-700 font-semibold nav-link" data-section="videos">Videos</a>
+             <h3 class="text-slate-800 font-bold mt-2 mb-1">Departamentos</h3>
+             <div id="mobile-department-list" class="border-l-2 border-slate-200 pl-2">
+                <!-- Lista de departamentos para móvil se insertará aquí -->
+             </div>
+             <!-- Logo añadido también al menú móvil (opcional, se puede quitar si no se desea) -->
+             <div class="mt-4 pt-4 border-t border-slate-200 flex justify-center">
+                 <img src="https://uml.edu.ni/wp-content/uploads/2023/07/sede-masaya-portada-300x300.png" alt="Logo UML" class="h-12 w-auto" onerror="this.onerror=null;this.src='https://placehold.co/100x100/cccccc/ffffff?text=Logo';">
+             </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="container mx-auto p-4 md:p-6">
+        <!-- Sección de Inicio -->
+        <section id="inicio" class="content-section active">
+            <!-- Texto cambiado a colores oscuros para contraste -->
+            <div class="hero-section p-8 md:p-16 rounded-xl shadow-lg text-center flex flex-col items-center justify-center min-h-[50vh]">
+                <h1 class="text-4xl md:text-6xl font-extrabold mb-4 leading-tight text-blue-800">Bienvenidos a la Tierra de Lagos y Volcanes</h1>
+                <!-- Imagen corregida y añadida correctamente -->
+                <img src="https://banderasporrasshop.com/wp-content/uploads/2025/09/bandera-de-nicaragua.jpg" alt="Bandera de Nicaragua" class="w-48 h-auto rounded-md shadow-lg my-4" onerror="this.onerror=null;this.src='https://placehold.co/300x200/cccccc/ffffff?text=Bandera+de+Nicaragua';">
+                <p class="text-lg md:text-xl max-w-3xl text-slate-700">Un viaje interactivo por la rica historia, las vibrantes tradiciones y la exquisita cultura de cada rincón de Nicaragua.</p>
+                <p class="mt-6 font-semibold text-slate-600">Selecciona una sección del menú para comenzar tu aventura.</p>
+            </div>
+        </section>
+
+        <!-- Sección de Historia (MUY AMPLIADA) -->
+        <section id="historia" class="content-section">
+            <div class="bg-white p-4 md:p-8 rounded-xl shadow-lg">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-blue-800 mb-2">Historia de Nicaragua</h1>
+                <p class="text-slate-500 mb-8">Un recorrido a través de los eventos que forjaron una nación.</p>
+                <div class="space-y-8 text-slate-600 leading-relaxed text-justify">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">Época Precolombina</h2>
+                        <p>Las huellas humanas más antiguas de Nicaragua, las <strong>Huellas de Acahualinca</strong>, datan de hace más de 6,000 años, testigos de una migración temprana huyendo de una erupción volcánica. Antes de la llegada de los europeos, el territorio era un mosaico de culturas. Los <strong>Chorotegas</strong>, de origen mesoamericano (México) y lengua mangue, ocupaban la fértil región del Pacífico. Eran conocidos por su cerámica policromada, su complejo calendario y una organización social en cacicazgos. Los <strong>Nicaraos</strong>, de habla náhuatl y también procedentes de México en migraciones posteriores, se asentaron en el istmo de Rivas. Desarrollaron una sociedad avanzada bajo el liderazgo del cacique Nicarao, de quien se cree que el país toma su nombre tras su encuentro con Gil González Dávila. En la Costa Caribe, habitaban pueblos como los <strong>Miskitos, Sumus (Mayangnas) y Ramas</strong>, con culturas y lenguas de la familia macro-chibcha, adaptadas a un entorno de selva tropical.</p>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">Conquista y Época Colonial</h2>
+                        <p>El primer contacto con los españoles ocurrió en 1522 con la expedición de <strong>Gil González Dávila</strong>, quien exploró la costa del Pacífico y mantuvo un famoso diálogo con el cacique Nicarao. La conquista y fundación de las primeras ciudades fue obra de <strong>Francisco Hernández de Córdoba</strong> en 1524, quien fundó <strong>Granada</strong>, a orillas del Lago Cocibolca, y <strong>León</strong>, cerca del Lago Xolotlán. Estas dos ciudades se convirtieron en los polos de poder de la provincia, generando una intensa rivalidad entre las élites conservadoras de Granada (basadas en la agricultura y el comercio) y las liberales de León (centro intelectual y administrativo). Durante la colonia, Nicaragua fue parte de la Capitanía General de Guatemala. La ruta del Río San Juan fue un punto estratégico y vulnerable a ataques de piratas ingleses y holandeses, lo que llevó a la construcción de fortalezas como <strong>El Castillo de la Inmaculada Concepción</strong>.</p>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">Independencia y la Guerra Nacional</h2>
+                        <p>La independencia de España se proclamó el 15 de septiembre de 1821, junto al resto de Centroamérica. Tras unirse brevemente al Imperio Mexicano de Iturbide y luego a las Provincias Unidas del Centro de América, Nicaragua se convirtió en una república soberana en 1838. El siglo XIX estuvo marcado por la anarquía y la lucha encarnizada entre liberales (León) y conservadores (Granada). Esta inestabilidad culminó en la <strong>Guerra Nacional (1856-1857)</strong>. Los liberales, en su afán de derrotar a los conservadores, contrataron al filibustero estadounidense <strong>William Walker</strong>. Walker traicionó a sus contratistas, tomó Granada y se autoproclamó presidente, con la intención de anexar Nicaragua a Estados Unidos y reinstaurar la esclavitud. La unión de los ejércitos centroamericanos fue crucial. La <strong>Batalla de San Jacinto</strong> el 14 de septiembre de 1856, donde el sargento Andrés Castro derribó a un filibustero de una pedrada, se convirtió en un símbolo de la resistencia. Walker fue finalmente derrotado y expulsado en 1857.</p>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">Intervenciones, Sandino y la Dinastía Somoza</h2>
+                        <p>Tras la Guerra Nacional, siguió el período de los "Treinta Años Conservadores", de relativa paz. En 1893, el liberal <strong>José Santos Zelaya</strong> tomó el poder, modernizando el estado, impulsando la educación y reincorporando la Mosquitia. Sin embargo, su nacionalismo y sus planes de construir un canal interoceánico con capital europeo lo enfrentaron a Estados Unidos, que apoyó su derrocamiento en 1909. La inestabilidad política resultante provocó varias intervenciones militares de EE. UU. En este contexto surgió la figura de <strong>Augusto C. Sandino</strong>, un líder nacionalista que, sintiéndose traicionado por los pactos entre políticos, emprendió una guerra de guerrillas contra la ocupación estadounidense entre 1927 y 1933, convirtiéndose en un símbolo antiimperialista. Tras la retirada de las tropas de EE. UU., Sandino firmó la paz, pero fue asesinado a traición en 1934 por orden de <strong>Anastasio Somoza García</strong>, jefe de la Guardia Nacional (creada por EE. UU.). Este evento marcó el inicio de una dictadura familiar que, con el apoyo de Washington, gobernó Nicaragua por más de 40 años, amasando una fortuna inmensa y reprimiendo toda oposición.</p>
+                    </div>
+                     <div>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">La Revolución Sandinista y la Década de 1980</h2>
+                        <p>El descontento popular contra la dictadura creció, especialmente tras el terremoto de Managua en 1972, cuando la familia Somoza desvió gran parte de la ayuda internacional. La oposición se aglutinó en torno al <strong>Frente Sandinista de Liberación Nacional (FSLN)</strong>, fundado en 1961. El 19 de julio de 1979, tras una sangrienta insurrección popular, la Revolución Popular Sandinista triunfó, derrocando a Anastasio Somoza Debayle. El nuevo gobierno implementó una <strong>Cruzada Nacional de Alfabetización</strong> (que redujo el analfabetismo del 50% al 12%) y una reforma agraria. Sin embargo, su alineamiento con el bloque socialista y su retórica marxista provocaron la hostilidad de Estados Unidos. La administración Reagan financió a la "Contra", una fuerza militar irregular, sumiendo al país en una devastadora guerra civil durante la década de 1980, marcada por el servicio militar obligatorio, la hiperinflación y el bloqueo económico.</p>
+                    </div>
+                     <div>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">Transición Democrática y Siglo XXI</h2>
+                        <p>Agotados por la guerra, los nicaragüenses acudieron a las elecciones de 1990. Sorprendiendo al mundo, <strong>Violeta Barrios de Chamorro</strong>, al frente de la coalición UNO, derrotó al FSLN y a Daniel Ortega. Su gobierno marcó el fin de la guerra, el desarme de la Contra y el inicio de un período de reconciliación y liberalización económica. Le sucedieron <strong>Arnoldo Alemán</strong> (1997-2002) y <strong>Enrique Bolaños</strong> (2002-2007), ambos liberales, quienes consolidaron el modelo de mercado pero enfrentaron graves acusaciones de corrupción. En 2007, el FSLN regresó al poder por la vía electoral con Daniel Ortega como presidente. Sus nuevos gobiernos se caracterizaron por una alianza con el sector privado, programas sociales financiados por la cooperación venezolana y grandes proyectos de infraestructura. Sin embargo, tras varias reelecciones y cambios constitucionales, en abril de 2018 estalló una profunda crisis sociopolítica, marcando un nuevo capítulo de polarización en la historia del país.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección de Presidentes (AMPLIADA) -->
+        <section id="presidentes" class="content-section">
+            <div class="bg-white p-4 md:p-8 rounded-xl shadow-lg">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-blue-800 mb-2">Presidentes de Nicaragua</h1>
+                <p class="text-slate-500 mb-8">Un recorrido por las figuras clave que han liderado el país a lo largo de su historia.</p>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/01_Fruto_Chamorro_P%C3%A9rez_1854-1855.png/672px-01_Fruto_Chamorro_P%C3%A9rez_1854-1855.png" alt="Retrato de Fruto Chamorro Pérez" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/7f8c8d/ffffff?text=Fruto+Chamorro+Pérez';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">Fruto Chamorro Pérez</h3>
+                            <p class="text-sm text-blue-700 font-semibold">1853 - 1855</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Primer presidente de Nicaragua bajo la Constitución de 1853. Su gobierno conservador enfrentó la guerra civil contra los liberales, conflicto que abrió la puerta a la intervención de William Walker.</p>
+                             <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 20 de octubre de 1804, Guatemala.</p>
+                                <p><strong>Fallecimiento:</strong> 12 de marzo de 1855, Granada.</p>
+                                <p><strong>Padres:</strong> Pedro José Chamorro y Josefa Pérez.</p>
+                                <p><strong>Legado:</strong> Considerado el fundador de la República Conservadora.</p>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://scontent.fmga3-2.fna.fbcdn.net/v/t39.30808-6/359474275_614104657480960_7169464964238556610_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=83SeWOqYUcYQ7kNvwE9zNvK&_nc_oc=AdlmfIQYjq9sZrmeqBFSdRhbJzdC3BmrjOFxypW3_WoBtQcz7ehfw9loYc-BIX1EL34&_nc_zt=23&_nc_ht=scontent.fmga3-2.fna&_nc_gid=McCqd77hMqDSHXZBDqTFvg&oh=00_Afc7Jb-hrFGsRMZRCki8-IN44T5KseB9AiIJiN6ZSilXjA&oe=68FAD5A" alt="Retrato de Tomás Martínez Guerrero" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/34495e/ffffff?text=Tomás+Martínez+Guerrero';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">Tomás Martínez Guerrero</h3>
+                            <p class="text-sm text-blue-700 font-semibold">1857 - 1867</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Héroe de la Guerra Nacional. Su presidencia inauguró el período conocido como los "Treinta Años Conservadores", una era de relativa paz, estabilidad y desarrollo económico para el país.</p>
+                             <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 21 de diciembre de 1820, Nagarote.</p>
+                                <p><strong>Fallecimiento:</strong> 12 de marzo de 1873, León.</p>
+                                <p><strong>Padres:</strong> Joaquín Martínez y María Guerrero.</p>
+                                <p><strong>Legado:</strong> Estableció Managua como capital permanente y modernizó el ejército.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Jose_Santos_Zelaya_cph.3a03378.jpg/800px-Jose_Santos_Zelaya_cph.3a03378.jpg" alt="Retrato de José Santos Zelaya" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/2c3e50/ffffff?text=José+Santos+Zelaya';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">José Santos Zelaya</h3>
+                            <p class="text-sm text-blue-700 font-semibold">1893 - 1909</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Lideró la Revolución Liberal de 1893. Modernizó el estado, promovió la educación laica, y reincorporó la Mosquitia. Su nacionalismo lo enfrentó con EE.UU., que apoyó su derrocamiento.</p>
+                             <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 1 de noviembre de 1853, Managua.</p>
+                                <p><strong>Fallecimiento:</strong> 17 de mayo de 1919, Nueva York.</p>
+                                <p><strong>Padres:</strong> José María Zelaya y Juana López.</p>
+                                <p><strong>Legado:</strong> Figura central del liberalismo nicaragüense, aunque su gobierno fue autoritario.</p>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/f/ff/Adolfo_Diaz_Recinos.jpg" alt="Retrato de Adolfo Díaz Recinos" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/9b59b6/ffffff?text=Adolfo+Díaz+Recinos';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">Adolfo Díaz Recinos</h3>
+                            <p class="text-sm text-blue-700 font-semibold">1911-1917, 1926-1929</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Presidente conservador cuya administración se caracterizó por una fuerte dependencia de Estados Unidos, permitiendo intervenciones militares para mantener la estabilidad.</p>
+                             <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 15 de julio de 1875, Alajuela, Costa Rica.</p>
+                                <p><strong>Fallecimiento:</strong> 29 de enero de 1964, San José, Costa Rica.</p>
+                                 <p><strong>Padres:</strong> Inocente Rodríguez y Dominga Recinos.</p>
+                                <p><strong>Legado:</strong> Figura polémica por su cercanía a EE.UU., firmó el Tratado Bryan-Chamorro.</p>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/f/f5/Anastasio_Somoza_Garcia.gif" alt="Retrato de Anastasio Somoza García" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/95a5a6/ffffff?text=Anastasio+Somoza+García';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">Anastasio Somoza García</h3>
+                            <p class="text-sm text-blue-700 font-semibold">1937-1947, 1950-1956</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Fundador de la dinastía Somoza. Su régimen fue una dictadura militar caracterizada por la represión, la corrupción y una fuerte alianza con Estados Unidos. Fue asesinado en 1956.</p>
+                            <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 1 de febrero de 1896, San Marcos.</p>
+                                <p><strong>Fallecimiento:</strong> 29 de septiembre de 1956, Panamá.</p>
+                                 <p><strong>Padres:</strong> Anastasio Somoza Reyes y Julia García.</p>
+                                <p><strong>Legado:</strong> Instauró una dictadura dinástica que duró más de 40 años.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://placehold.co/600x400/718093/ffffff?text=Luis+Somoza+Debayle" alt="Retrato de Luis Somoza Debayle" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/718093/ffffff?text=Luis+Somoza+Debayle';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">Luis Somoza Debayle</h3>
+                            <p class="text-sm text-blue-700 font-semibold">1956 - 1963</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Hijo de Somoza García, heredó la presidencia. Su gobierno fue una dictadura más "suave", permitiendo cierta liberalización, pero manteniendo el control férreo de la familia.</p>
+                            <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 18 de noviembre de 1922, León.</p>
+                                <p><strong>Fallecimiento:</strong> 13 de abril de 1967, Managua.</p>
+                                 <p><strong>Padres:</strong> Anastasio Somoza García y Salvadora Debayle.</p>
+                                <p><strong>Legado:</strong> Continuó la dinastía y fundó el Banco Central de Nicaragua.</p>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://placehold.co/600x400/e74c3c/ffffff?text=Anastasio+Somoza+Debayle" alt="Retrato de Anastasio Somoza Debayle" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/e74c3c/ffffff?text=Anastasio+Somoza+Debayle';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">Anastasio Somoza Debayle</h3>
+                            <p class="text-sm text-blue-700 font-semibold">1967-1972, 1974-1979</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Último miembro de la dinastía. Su régimen fue extremadamente represivo y corrupto, especialmente tras el terremoto de 1972. Fue derrocado por la Revolución Sandinista.</p>
+                            <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 5 de diciembre de 1925, León.</p>
+                                <p><strong>Fallecimiento:</strong> 17 de septiembre de 1980, Asunción, Paraguay.</p>
+                                 <p><strong>Padres:</strong> Anastasio Somoza García y Salvadora Debayle.</p>
+                                <p><strong>Legado:</strong> Símbolo de la dictadura y corrupción que llevó a la revolución.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://www.revistaeyn.com/binrepository/1200x890/0c0/0d0/none/26086/WLID/violeta-chamorro-presidenta_11066246_20250614135209.jpg" alt="Foto de Violeta Barrios de Chamorro" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/16a085/ffffff?text=Violeta+B.+de+Chamorro';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">Violeta Barrios de Chamorro</h3>
+                            <p class="text-sm text-blue-700 font-semibold">1990 - 1997</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Primera y única mujer presidenta de Nicaragua. Su victoria electoral marcó el fin de la guerra y el inicio de un período de reconciliación nacional, desarme y estabilización económica.</p>
+                             <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 18 de octubre de 1929, Rivas.</p>
+                                <p><strong>Fallecimiento:</strong> Viva.</p>
+                                 <p><strong>Padres:</strong> Carlos Barrios y Amalia Torres.</p>
+                                <p><strong>Legado:</strong> Símbolo de la transición a la democracia y la paz en Nicaragua.</p>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://placehold.co/600x400/3498db/ffffff?text=Arnoldo+Alemán+Lacayo" alt="Retrato de Arnoldo Alemán" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/3498db/ffffff?text=Arnoldo+Alemán+Lacayo';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">Arnoldo Alemán Lacayo</h3>
+                            <p class="text-sm text-blue-700 font-semibold">1997 - 2002</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Su gobierno liberal se centró en la reconstrucción tras el Huracán Mitch y la reactivación económica, pero fue empañado por graves escándalos de corrupción.</p>
+                             <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 23 de enero de 1946, Managua.</p>
+                                <p><strong>Fallecimiento:</strong> Vivo.</p>
+                                 <p><strong>Padres:</strong> Arnoldo Alemán y María Lacayo.</p>
+                                <p><strong>Legado:</strong> Marcado por la reconstrucción post-Mitch y el "Pacto" con el FSLN.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://placehold.co/600x400/2ecc71/ffffff?text=Enrique+Bolaños+Geyer" alt="Retrato de Enrique Bolaños" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/2ecc71/ffffff?text=Enrique+Bolaños+Geyer';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">Enrique Bolaños Geyer</h3>
+                            <p class="text-sm text-blue-700 font-semibold">2002 - 2007</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Su presidencia se destacó por una fuerte campaña anticorrupción contra su predecesor, Arnoldo Alemán, y por la firma del CAFTA-DR con Estados Unidos.</p>
+                             <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 13 de mayo de 1928, Masaya.</p>
+                                <p><strong>Fallecimiento:</strong> 14 de junio de 2021, Managua.</p>
+                                 <p><strong>Padres:</strong> Nicolás Bolaños y Amanda Geyer.</p>
+                                <p><strong>Legado:</strong> Recordado por su "lucha contra la corrupción" y la estabilidad macroeconómica.</p>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Card Presidente -->
+                    <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                        <img src="https://www.visionsandinista.net/wp-content/uploads/2021/10/Daniel_Ortega.jpg" alt="Retrato de Daniel Ortega Saavedra" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f1c40f/ffffff?text=Daniel+Ortega+Saavedra';">
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-xl text-slate-800">Daniel Ortega Saavedra</h3>
+                            <p class="text-sm text-blue-700 font-semibold">1985-1990, 2007-Actualidad</p>
+                            <p class="text-sm text-slate-600 mt-2 flex-grow">Líder histórico del FSLN. Presidente durante la guerra de los 80, regresó al poder en 2007. Sus mandatos recientes se han enfocado en programas sociales y la economía.</p>
+                             <div class="text-xs text-slate-500 mt-3 border-t pt-2">
+                                <p><strong>Nacimiento:</strong> 11 de noviembre de 1945, La Libertad.</p>
+                                <p><strong>Fallecimiento:</strong> Vivo.</p>
+                                 <p><strong>Padres:</strong> Daniel Ortega y Lidia Saavedra.</p>
+                                <p><strong>Legado:</strong> Figura central y polarizadora de la política nicaragüense por más de 40 años.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Sección de Feriados (con placeholders de imagen y 30 Mayo) -->
+        <section id="feriados" class="content-section">
+            <div class="bg-white p-4 md:p-8 rounded-xl shadow-lg">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-blue-800 mb-2">Días Feriados de Nicaragua</h1>
+                <p class="text-slate-500 mb-8">Celebraciones que marcan el calendario y la identidad nacional.</p>
+                <div class="space-y-10 text-slate-600 leading-relaxed text-justify">
+                    <!-- Feriado Item -->
+                    <div class="feriado-item">
+                         <div class="media-placeholder image-placeholder rounded-lg w-full md:w-[150px] aspect-[4/3] md:aspect-auto"></div>
+                         <div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">1 de Enero: Año Nuevo</h2>
+                            <p>Como en gran parte del mundo, el primer día del año es feriado nacional. Las familias nicaragüenses suelen reunirse para celebrar, a menudo continuando los festejos de la noche anterior. Es un día de descanso y para compartir propósitos para el nuevo año que comienza.</p>
+                         </div>
+                    </div>
+                    <!-- Feriado Item -->
+                    <div class="feriado-item">
+                        <div class="media-placeholder image-placeholder rounded-lg w-full md:w-[150px] aspect-[4/3] md:aspect-auto"></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">Jueves y Viernes Santo: Semana Santa</h2>
+                            <p>Son los días culminantes de la Semana Santa, una de las festividades religiosas más importantes del país. La fecha varía cada año (marzo o abril). Durante estos días, gran parte de la actividad comercial se detiene. Se realizan procesiones solemnes en todo el país, destacando las alfombras pasionarias de aserrín en León y Granada. También es una época en que muchos nicaragüenses aprovechan para visitar las playas y centros turísticos.</p>
+                        </div>
+                    </div>
+                     <!-- Feriado Item -->
+                    <div class="feriado-item">
+                        <div class="media-placeholder image-placeholder rounded-lg w-full md:w-[150px] aspect-[4/3] md:aspect-auto"></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">1 de Mayo: Día Internacional de los Trabajadores</h2>
+                            <p>Es un feriado nacional en conmemoración de la lucha por los derechos laborales. Los sindicatos y organizaciones de trabajadores suelen organizar marchas y eventos para reivindicar mejores condiciones laborales y recordar los logros obtenidos a lo largo de la historia.</p>
+                        </div>
+                    </div>
+                     <!-- Feriado Item: 30 de Mayo -->
+                    <div class="feriado-item">
+                        <div class="media-placeholder image-placeholder rounded-lg w-full md:w-[150px] aspect-[4/3] md:aspect-auto"></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">30 de Mayo: Día de la Madre Nicaragüense</h2>
+                            <p>Establecido por ley como feriado nacional para honrar a las madres nicaragüenses. Es un día de celebración familiar, donde se acostumbra agasajar a las madres con regalos, comidas especiales y reuniones. Su origen se remonta a iniciativas de educadoras en los años 40 y fue oficializado posteriormente como feriado de carácter nacional.</p>
+                        </div>
+                    </div>
+                     <!-- Feriado Item -->
+                    <div class="feriado-item">
+                        <div class="media-placeholder image-placeholder rounded-lg w-full md:w-[150px] aspect-[4/3] md:aspect-auto"></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">19 de Julio: Día de la Revolución Popular Sandinista</h2>
+                            <p>Conmemora el triunfo de la Revolución Sandinista en 1979, que puso fin a la dictadura de la familia Somoza. Es una fecha de gran importancia para el partido de gobierno (FSLN) y sus simpatizantes, quienes organizan una masiva concentración en Managua y celebraciones en todo el país. Oficialmente se denomina "Día de la Alegría".</p>
+                        </div>
+                    </div>
+                     <!-- Feriado Item -->
+                    <div class="feriado-item">
+                        <div class="media-placeholder image-placeholder rounded-lg w-full md:w-[150px] aspect-[4/3] md:aspect-auto"></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">14 y 15 de Septiembre: Fiestas Patrias</h2>
+                            <p><strong>14 de Septiembre: Batalla de San Jacinto.</strong> Se conmemora la heroica victoria nicaragüense contra los filibusteros de William Walker en 1856. Se realizan actos cívicos y se enaltece la figura del héroe Andrés Castro. <br><strong>15 de Septiembre: Día de la Independencia.</strong> Celebra la firma del Acta de Independencia de Centroamérica de la corona española en 1821. Durante todo el mes de septiembre, las escuelas y colegios realizan desfiles y actos culturales, y las calles se visten con los colores azul y blanco de la bandera nacional.</p>
+                        </div>
+                    </div>
+                    <!-- Feriado Item -->
+                    <div class="feriado-item">
+                        <div class="media-placeholder image-placeholder rounded-lg w-full md:w-[150px] aspect-[4/3] md:aspect-auto"></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">8 de Diciembre: La Inmaculada Concepción de María</h2>
+                            <p>Este es un feriado religioso en honor a la patrona de Nicaragua. La celebración principal es "La Gritería", que tiene lugar en la víspera, el 7 de diciembre por la noche. La gente recorre las calles, visita altares a la virgen en las casas y canta, a lo que los anfitriones responden con el grito "¿Quién causa tanta alegría?" y la multitud responde "¡La Concepción de María!", recibiendo a cambio dulces, frutas y pequeños regalos ("la gorra").</p>
+                        </div>
+                    </div>
+                    <!-- Feriado Item -->
+                    <div class="feriado-item">
+                         <div class="media-placeholder image-placeholder rounded-lg w-full md:w-[150px] aspect-[4/3] md:aspect-auto"></div>
+                         <div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-3 border-b-2 border-blue-200 pb-2">25 de Diciembre: Navidad</h2>
+                            <p>Feriado nacional para celebrar el nacimiento de Jesús. Es una festividad eminentemente familiar. Las familias se reúnen para la cena de Nochebuena el 24 de diciembre, intercambian regalos y celebran el 25 con un día de descanso y recalentado.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Nueva Sección de Videos -->
+        <section id="videos" class="content-section">
+            <div class="bg-white p-4 md:p-8 rounded-xl shadow-lg">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-blue-800 mb-2">Videos Culturales</h1>
+                <p class="text-slate-500 mb-8">Explora los símbolos y la música que definen a Nicaragua.</p>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Video Placeholder 1: Himno Nacional -->
+                    <div class="flex flex-col">
+                         <!-- Reemplazado placeholder con iframe -->
+                         <div class="rounded-lg mb-4 overflow-hidden shadow-md">
+                            <iframe class="w-full aspect-video" src="https://www.youtube.com/embed/8P8fHNRabvM?list=RD8P8fHNRabvM" title="Himno nacional de Nicaragua" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                         </div>
+                         <h3 class="font-bold text-xl text-slate-800 mb-2">Himno Nacional de Nicaragua</h3>
+                         <p class="text-sm text-slate-600">"Salve a ti, Nicaragua" - Escucha la letra y música del hermoso himno nacional, un canto a la paz y al trabajo adoptado oficialmente en 1939.</p>
+                    </div>
+                    <!-- Video Placeholder 2: Ave Nacional -->
+                    <div class="flex flex-col">
+                         <div class="media-placeholder video-placeholder rounded-lg mb-4"></div>
+                         <h3 class="font-bold text-xl text-slate-800 mb-2">El Guardabarranco, Ave Nacional</h3>
+                         <p class="text-sm text-slate-600">Conoce al Guardabarranco (Eumomota superciliosa), el ave nacional de Nicaragua desde 1971, admirado por su colorido plumaje y su distintiva cola.</p>
+                    </div>
+                    <!-- Video Placeholder 3: Flor y Árbol Nacional -->
+                    <div class="flex flex-col">
+                         <div class="media-placeholder video-placeholder rounded-lg mb-4"></div>
+                         <h3 class="font-bold text-xl text-slate-800 mb-2">Flor y Árbol Nacionales</h3>
+                         <p class="text-sm text-slate-600">Descubre la belleza de la Flor de Sacuanjoche (Plumeria rubra) y la majestuosidad del Madroño (Calycophyllum candidissimum), símbolos nacionales de Nicaragua.</p>
+                    </div>
+                </div>
+                <p class="mt-8 text-center text-slate-500 text-sm">Próximamente podrás ver los videos aquí.</p>
+                 <p class="mt-2 text-center text-xs text-slate-400">Para insertar un video, reemplaza el div con la clase 'video-placeholder' por un iframe de YouTube.</p>
+            </div>
+        </section>
+
+
+        <!-- Secciones de Departamentos (Contenido Dinámico) -->
+        <div id="department-content-container">
+            <!-- El contenido de cada departamento se generará aquí -->
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white mt-12 py-8 border-t border-slate-200">
+        <div class="container mx-auto px-6 text-center">
+            <p class="text-slate-500">&copy; 2025 Museo Virtual de Nicaragua. Un proyecto para la difusión cultural.</p>
+            <p class="text-sm text-slate-400 mt-1">Diseñado para preservar y compartir nuestro patrimonio.</p>
+        </div>
+    </footer>
+
+    <script>
+        const departments = [
+            { id: "managua", name: "Managua" }, { id: "masaya", name: "Masaya" },
+            { id: "granada", name: "Granada" }, { id: "leon", name: "León" },
+            { id: "rivas", name: "Rivas" }, { id: "carazo", name: "Carazo" },
+            { id: "chinandega", name: "Chinandega" }, { id: "esteli", name: "Estelí" },
+            { id: "jinotega", name: "Jinotega" }, { id: "matagalpa", name: "Matagalpa" },
+            { id: "chontales", name: "Chontales" }, { id: "boaco", name: "Boaco" },
+            { id: "madriz", name: "Madriz" }, { id: "nueva_segovia", name: "Nueva Segovia" },
+            { id: "rio_san_juan", name: "Río San Juan" }, { id: "caribe_norte", name: "Costa Caribe Norte" },
+            { id: "caribe_sur", name: "Costa Caribe Sur" }
+        ];
+
+        const departmentData = {
+            managua: {
+                title: "Managua, Capital Vibrante",
+                places_img: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/10/cd/f2/4d/caption.jpg?w=1200&h=1200&s=1",
+                traditions_img: "https://scontent.fmga3-2.fna.fbcdn.net/v/t39.30808-6/484962195_670352722216168_7434919119480749249_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=833d8c&_nc_ohc=p3LM25-hfDoQ7kNvwH-qCPL&_nc_oc=Admg_f05WNBekynW9SQnXD8Pd1NUA7aK8mcBwKPIr4nDycZaVeUOzz0q68enkpsoB4Q&_nc_zt=23&_nc_ht=scontent.fmga3-2.fna&_nc_gid=bQuVeuE6KhP4OTjzgbcFZA&oh=00_Afe3P3DugDQyBqs3_M0I47IUG9hT9tgn9wp6JjET93Y0Gg&oe=68FAD1CA",
+                dances_img: "https://www.el19digital.com/files/notas/source/2017/00-Julio/31deJULIO/vaca-culona/vaca-culona-1.JPG",
+                foods_img: "https://i.pinimg.com/564x/cc/fb/79/ccfb79a2c127b829ea8ae2a5b5948d50.jpg",
+                places: "<strong>Palacio de la Cultura:</strong> Antiguo Palacio Nacional, hoy alberga el Archivo Nacional. <strong>Loma de Tiscapa:</strong> Sitio histórico con vistas panorámicas y la icónica silueta de Sandino.",
+                traditions: "<strong>Fiestas de Santo Domingo de Guzmán:</strong> Celebradas en agosto, son las fiestas patronales más grandes del país, llenas de color, música y fervor religioso popular.",
+                dances: "<strong>El baile de las vaquitas:</strong> Acompaña la procesión de Santo Domingo, donde los promesantes se visten con trajes que simulan ser una vaca.",
+                foods: "<strong>El nacatamal es una comida típica nicaragüense, especialmente de Managua, que representa una parte importante de la gastronomía local y se consume tradicionalmente los fines de semana y días festivos. Consiste en una masa de maíz rellena de cerdo, pollo o res, junto con verduras, arroz y condimentos, todo envuelto en hoja de plátano y cocido al vapor. Es un plato que refleja la fusión de las culturas indígena y española, y su preparación es una actividad familiar común en la capital. ",
+                extra_info: "<strong>Geografía:</strong> Ubicado en la costa suroeste del Lago Xolotlán. <strong>Economía:</strong> Centro político, social y económico del país. <strong>Municipios destacados:</strong> Managua, Ciudad Sandino, Ticuantepe."
+            },
+            masaya: {
+                title: "Masaya, la Cuna del Folklore",
+                places_img: "https://www.visitcentroamerica.com/wp-content/uploads/2025/04/Masaya-Arts-and-Crafts-Nicaragua-Centroamerica-06.webp",
+                traditions_img: "https://www.visitanicaragua.com/wp-content/uploads/2023/10/aguizote-Nicaragua13.jpg",
+                dances_img: "https://radionicaragua.com.ni/wp-content/uploads/2024/10/WhatsApp-Image-2024-10-29-at-8.42.19-AM-1.jpeg",
+                foods_img: "https://www.vostv.com.ni/media/news/800e4bb2695111eea46f567103a612d1.jpeg",
+                places: "<strong>Mercado de Artesanías:</strong> Ubicado en una estructura que data de 1891, es el corazón de la artesanía nicaragüense. <strong>Volcán Masaya:</strong> Uno de los pocos volcanes del mundo donde se puede ver lava incandescente.",
+                traditions: "<strong>Los Agüizotes:</strong> Celebración nocturna donde los participantes se disfrazan de personajes de mitos y leyendas nicaragüenses.",
+                dances: "<strong>El Baile de Negras:</strong> Hombres vestidos con trajes femeninos elegantes y máscaras bailan al son de la marimba, una sátira social de la época colonial.",
+                foods: "<strong>El Indio Viejo:</strong> El “Indio Viejo” para muchos nicaragüenses es uno de sus platos típicos favoritos, un guiso elaborado a base de maíz y carne de res desmenuzada, a la que se le agregan otros ingredientes que le ayudan a realzar el sabor y color. Esta es una de las comidas más antiguas de la cocina nicaragüense <strong>Sopa de Mondongo:</strong> Sopa robusta hecha de tripa de res.",
+                extra_info: "<strong>Geografía:</strong> El departamento más pequeño pero densamente poblado, con un sistema lagunar notable. <strong>Economía:</strong> Famoso por su artesanía, muebles de madera y flores. <strong>Municipios destacados:</strong> Masaya, Nindirí, Catarina."
+            },
+            granada: {
+                title: "Granada, La Gran Sultana",
+                places_img: "https://nicadestino.com/wp-content/uploads/listing-uploads/gallery/2022/01/Catedral-de-Granada-1.jpg",
+                traditions_img: "https://radionicaragua.com.ni/wp-content/uploads/2025/08/Granada-1.jpg",
+                dances_img: "https://www.mined.gob.ni/mapatradicionesculturapopular/wp-content/uploads/2022/02/Diria-mode-02.png",
+                foods_img: "https://scontent.fmga9-1.fna.fbcdn.net/v/t39.30808-6/484211059_1032904612227214_2769344240871725677_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=833d8c&_nc_ohc=SI3ib5M72v0Q7kNvwGfiwCo&_nc_oc=AdnsiJ1kGlsDs1mOnr6dW0oFFf3R0XKDXBXWT14wmqCSeDSiHmAJ1uJVN4rmhYfP4S4&_nc_zt=23&_nc_ht=scontent.fmga9-1.fna&_nc_gid=8INz2eCt_hPSSp-DIlLDgg&oh=00_Aff4iNWGM428kzpQXeYNHh78aacaRteQ-y7debqTcUGYDg&oe=68FF5D26",
+                places: "<strong>Catedral de Granada:</strong> Con su imponente fachada neoclásica, es un ícono de la ciudad. <strong>Isletas de Granada:</strong> Un archipiélago de más de 365 pequeñas islas en el Lago Cocibolca.",
+                traditions: "<strong>Hípicos de Granada:</strong> Famosos desfiles de caballos que atraen a jinetes de todo el país, especialmente durante las fiestas patronales en agosto.",
+                dances: "<strong>La Yegüita:</strong> Una danza tradicional que dramatiza una disputa entre dos hombres por una yegua, resuelta por una autoridad.",
+                foods: "<strong>Vigorón:</strong> El plato insignia de la ciudad, servido en una hoja de plátano. <strong>Sorbete de La Calzada:</strong> Un postre helado tradicional y refrescante.",
+                 extra_info: "<strong>Geografía:</strong> A orillas del gran Lago Cocibolca y a los pies del Volcán Mombacho. <strong>Economía:</strong> Principal centro turístico del país, con una fuerte industria hotelera y gastronómica. <strong>Municipios destacados:</strong> Granada, Nandaime."
+            },
+            leon: {
+                title: "León, Ciudad Universitaria",
+                places_img: "https://www.visitanicaragua.com/wp-content/uploads/2017/01/catedral-de-leon.jpg",
+                traditions_img: "https://www.intur.gob.ni/wp-content/uploads/2021/08/Viva-la-%E2%80%9CGriter%C3%ADa-Chiquita%E2%80%9D-este-fin-de-semana.jpg",
+                dances_img: "https://confidencial.digital/wp-content/uploads/2024/01/eb606c3cf91071e4680e85fe1ab1fb6cfe31c434.jpg.avif",
+                foods_img: "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh3aDyKgB9Rsi1a0JU-EZo7Xe34olEWZRzX6g5wRY0QtkzHlCg1qFVvTsGmoAvopZZEy1WNVIsjvu51fG441wGSFw0RUBaxCe_bjeisyXdRPpTI6WPODTgkXQEG5_zO3JyhVj44R8b3848/s1600/FOTO+DIEZ+PREPARACION++22.jpg",
+                places: "<strong>Catedral de León:</strong> Patrimonio de la Humanidad por la UNESCO. Se puede caminar sobre su techo blanco. <strong>Ruinas de León Viejo:</strong> El sitio original de la ciudad, destruido por un terremoto en 1610.",
+                traditions: "<strong>La Gritería Chiquita:</strong> Se celebra el 14 de agosto en agradecimiento a la Virgen de la Asunción. <strong>La Gigantona y el Enano Cabezón:</strong> Sátira del poder español.",
+                dances: "<strong>El Toro Huaco:</strong> Danza tradicional ligada a las festividades religiosas y populares de la región.",
+                foods: "<strong>Quesillo:</strong> El más famoso del país, servido en una bolsa plástica para comerlo fácilmente. <strong>Pescado frito de Poneloya:</strong> Plato típico de la costa leonesa.",
+                extra_info: "<strong>Geografía:</strong> Planicies extensas dominadas por la cordillera de los Maribios. <strong>Economía:</strong> Agrícola (maní, caña de azúcar), camaricultura y turismo. <strong>Municipios destacados:</strong> León, La Paz Centro, Nagarote."
+            },
+            rivas: {
+                title: "Rivas, Tierra de Olas y Viento",
+                places_img: "https://www.visitanicaragua.com/wp-content/uploads/2024/09/Portada-San-Juan-del-Sur-1200x600.jpg",
+                traditions_img: "https://radio-corporacion.com/wp-content/uploads/2022/01/san-sebastian--678x381.png",
+                dances_img: "https://www.visitanicaragua.com/wp-content/uploads/2024/01/Baile-El-Gueguense-portada.jpg",
+                foods_img: "https://www.radioveritasnicaragua.org/wp-content/uploads/2024/02/sopa-1024x683.png",
+                places: "<strong>San Juan del Sur:</strong> Famoso por sus playas para el surf. <strong>Isla de Ometepe:</strong> Impresionante isla formada por dos volcanes en el Lago Cocibolca, un paraíso natural y arqueológico.",
+                traditions: "<strong>Fiestas de San Sebastián:</strong> En Diriamba (Carazo) pero con fuerte influencia en Rivas, con desfiles y bailes tradicionales.",
+                dances: "<strong>El Güegüense:</strong> Obra maestra del Patrimonio de la Humanidad, su influencia cultural se extiende a toda la región.",
+                foods: "<strong>Sopa de Queso:</strong> Sopa tradicional de Semana Santa, hecha con masa de maíz, queso y crema. <strong>Pescado a la Tipitapa:</strong> Pescado frito bañado en salsa de tomate.",
+                extra_info: "<strong>Geografía:</strong> Un istmo entre el Lago Cocibolca y el Océano Pacífico. <strong>Economía:</strong> Turismo, agricultura (plátano, caña de azúcar) y energía eólica. <strong>Municipios destacados:</strong> Rivas, San Juan del Sur, Moyogalpa."
+            },
+            carazo: {
+                title: "Carazo, Cuna de El Güegüense",
+                places_img: "https://www.mapanicaragua.com/wp-content/uploads/2021/01/Basilica-menor-de-San-Sebastian.jpg",
+                traditions_img: "https://www.el19digital.com/files/articulos/196336.jpg",
+                dances_img: "https://www.visitanicaragua.com/wp-content/uploads/2024/01/Baile-El-Gueguense-7.jpg",
+                foods_img: "https://www.visitanicaragua.com/wp-content/uploads/2022/01/portada-picadillo.jpg",
+                places: "<strong>Basílica Menor de San Sebastián en Diriamba:</strong> Importante centro de peregrinación. <strong>Refugio de Vida Silvestre Chacocente:</strong> Uno de los pocos lugares del mundo donde anidan masivamente las tortugas marinas.",
+                traditions: "<strong>Fiestas Patronales de San Sebastián:</strong> En enero, Diriamba se viste de gala con los bailes del Güegüense, el Toro Huaco y las Inditas.",
+                dances: "<strong>El Güegüense:</strong> La primera obra de teatro y danza de la literatura nicaragüense, que satiriza a las autoridades coloniais.",
+                foods: "<strong>Picadillo:</strong> Un guiso de carne molida con verduras. <strong>Ajiaco:</strong> Una sopa espesa a base de maíz y carne.",
+                extra_info: "<strong>Geografía:</strong> Una meseta con clima agradable. <strong>Economía:</strong> Cultivo de café, cítricos y granos básicos. <strong>Municipios destacados:</strong> Jinotepe, Diriamba, San Marcos."
+            },
+            chinandega: {
+                title: "Chinandega, el Corazón del Occidente",
+                places_img: "https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?q=80&w=800&auto=format&fit=crop",
+                traditions_img: "https://placehold.co/800x400/3498db/ffffff?text=Lavada+de+la+Plata",
+                dances_img: "https://placehold.co/800x400/e74c3c/ffffff?text=Danzas+Folclóricas",
+                foods_img: "https://placehold.co/800x400/2ecc71/ffffff?text=Camarones+de+Estero",
+                places: "<strong>Volcán San Cristóbal:</strong> El volcán más alto y uno de los más activos de Nicaragua. <strong>Basílica de El Viejo:</strong> Hogar de la imagen de Nuestra Señora del Trono, centro de peregrinación nacional.",
+                traditions: "<strong>Lavada de la Plata:</strong> Ceremonia religiosa en la Basílica de El Viejo donde los devotos limpian los tesoros de plata de la virgen como acto de fe.",
+                dances: "<strong>La Cuchara Panda:</strong> Danza folclórica de la región, acompañada de marimba y guitarra.",
+                foods: "<strong>Rosquillas de Somoto:</strong> Aunque de Madriz, son muy populares. <strong>Camarones de estero:</strong> Deliciosos camarones de las zonas costeras.",
+                extra_info: "<strong>Geografía:</strong> Extensas planicies de origen volcánico, muy fértiles. Posee el puerto más importante del país (Corinto). <strong>Economía:</strong> Agroindustrial (azúcar, ron), agrícola (maní, banano) y pesca. <strong>Municipios destacados:</strong> Chinandega, El Viejo, Corinto."
+            },
+            esteli: {
+                title: "Estelí, Diamante de las Segovias",
+                places_img: "https://placehold.co/800x400/95a5a6/ffffff?text=Salto+de+la+Estanzuela",
+                traditions_img: "https://images.unsplash.com/photo-1599881613280-9149b0498b5a?q=80&w=800&auto=format&fit=crop",
+                dances_img: "https://placehold.co/800x400/f1c40f/ffffff?text=Polkas+y+Mazurcas",
+                foods_img: "https://placehold.co/800x400/e67e22/ffffff?text=Güirila+con+Cuajada",
+                places: "<strong>Salto de la Estanzuela:</strong> Una hermosa cascada rodeada de naturaleza. <strong>Murales de la Ciudad:</strong> Estelí es famosa por sus murales callejeros que narran la historia y la cultura de la región.",
+                traditions: "<strong>Capital del Tabaco:</strong> Reconocida mundialmente por sus fábricas de puros de alta calidad, que son una parte fundamental de su economía y cultura.",
+                dances: "<strong>Polkas y Mazurcas:</strong> Bailes de origen europeo que se arraigaron fuertemente en la región norte de Nicaragua, adaptados con un estilo local único.",
+                foods: "<strong>Montucas:</strong> Tamales de maíz tierno. <strong>Güirila:</strong> Una tortilla de maíz tierno, usualmente servida con cuajada y crema.",
+                extra_info: "<strong>Geografía:</strong> Valles altos y montañas con clima fresco. <strong>Economía:</strong> Principalmente la industria del tabaco (puros de exportación) y la agricultura. <strong>Municipios destacados:</strong> Estelí, Condega, Pueblo Nuevo."
+            },
+             jinotega: {
+                title: "Jinotega, la Ciudad de las Brumas",
+                places_img: "https://placehold.co/800x400/34495e/ffffff?text=Peña+de+la+Cruz",
+                traditions_img: "https://images.unsplash.com/photo-1598439281316-c062c2f6b8f3?q=80&w=800&auto=format&fit=crop",
+                dances_img: "https://placehold.co/800x400/9b59b6/ffffff?text=Música+Norteña",
+                foods_img: "https://placehold.co/800x400/1abc9c/ffffff?text=Café+de+Altura",
+                places: "<strong>Peña de la Cruz:</strong> Un mirador natural que ofrece vistas espectaculares. <strong>Reserva Natural Datanlí - El Diablo:</strong> Ideal para el ecoturismo y la observación de aves.",
+                traditions: "<strong>Capital del Café:</strong> La producción de café de altura es el alma de Jinotega. Las fincas de café ofrecen tours para aprender sobre el proceso.",
+                dances: "<strong>Polkas y Mazurcas:</strong> La música y el baile de la región norteña tienen una fuerte influencia europea, interpretada con instrumentos locales.",
+                foods: "<strong>Café de alta calidad:</strong> La bebida por excelencia. <strong>Sopa de Frijoles con Chicharrón:</strong> Sopa reconfortante y sustanciosa.",
+                extra_info: "<strong>Geografía:</strong> Montañoso y con el lago artificial más grande de Centroamérica (Apanás). <strong>Economía:</strong> Principal productor de café de Nicaragua, además de hortalizas y flores. <strong>Municipios destacados:</strong> Jinotega, San Rafael del Norte, La Concordia."
+            },
+            matagalpa: {
+                title: "Matagalpa, la Perla del Septentrión",
+                places_img: "https://placehold.co/800x400/c0392b/ffffff?text=Catedral+de+Matagalpa",
+                traditions_img: "https://images.unsplash.com/photo-1620392364528-726e2553768f?q=80&w=800&auto=format&fit=crop",
+                dances_img: "https://placehold.co/800x400/8e44ad/ffffff?text=El+Jamaquello",
+                foods_img: "https://placehold.co/800x400/2980b9/ffffff?text=Carne+Asada",
+                places: "<strong>Catedral San Pedro Apóstol:</strong> La principal iglesia de la ciudad. <strong>Selva Negra:</strong> Una finca de café y hotel de montaña, ejemplo de turismo sostenible y conservación.",
+                traditions: "<strong>Cuna de Rubén Darío:</strong> Aunque Darío nació en Metapa (hoy Ciudad Darío), Matagalpa reivindica su herencia cultural. La producción de café y cacao definen sus traditions.",
+                dances: "<strong>El Jamaquello:</strong> Danza folclórica que representa el cortejo del hombre a la mujer en el campo.",
+                foods: "<strong>Güirila con cuajada:</strong> Tortilla de maíz tierno muy popular. <strong>Carne asada al estilo matagalpino:</strong> Carne de res marinada y asada.",
+                extra_info: "<strong>Geografía:</strong> Relieve montañoso con un clima agradable. <strong>Economía:</strong> Producción de café, cacao, granos básicos y ganadería. <strong>Municipios destacados:</strong> Matagalpa, Sébaco, Ciudad Darío."
+            },
+            chontales: {
+                title: "Chontales, Tierra de Leche y Miel",
+                places_img: "https://placehold.co/800x400/27ae60/ffffff?text=Serranía+de+Amerrisque",
+                traditions_img: "https://placehold.co/800x400/d35400/ffffff?text=Tradición+Ganadera",
+                dances_img: "https://placehold.co/800x400/bdc3c7/ffffff?text=Son+de+Toros",
+                foods_img: "https://placehold.co/800x400/7f8c8d/ffffff?text=Quesillos+y+Cuajada",
+                places: "<strong>Serranía de Amerrisque:</strong> Una cadena montañosa con petroglifos precolombinos. <strong>Juigalpa:</strong> La cabecera departamental, conocida por su tradición ganadera.",
+                traditions: "<strong>Cultura ganadera:</strong> Las corridas de toros y los desfiles hípicos son el corazón de las fiestas locales. La región es famosa por su producción de leche y queso.",
+                dances: "<strong>Son de Toros:</strong> Música de 'chicheros' que acompaña las corridas de toros y fiestas populares.",
+                foods: "<strong>Quesillos de La Libertad:</strong> Famosos en toda la región. <strong>Sopa de cuajada:</strong> Sopa a base de productos lácteos, típica de la zona.",
+                extra_info: "<strong>Geografía:</strong> Extensas llanuras y serranías. <strong>Economía:</strong> Principalmente ganadería (carne y leche) y minería. <strong>Municipios destacados:</strong> Juigalpa, Santo Tomás, Acoyapa."
+            },
+            boaco: { // Added Boaco
+                title: "Boaco, la Ciudad de Dos Pisos",
+                places_img: "https://placehold.co/800x400/16a085/ffffff?text=Cerro+de+la+Vieja+Boaco",
+                traditions_img: "https://placehold.co/800x400/f39c12/ffffff?text=Vida+de+Campo+Boaco",
+                dances_img: "https://placehold.co/800x400/c0392b/ffffff?text=Bailes+Campesinos+Boaco",
+                foods_img: "https://placehold.co/800x400/2980b9/ffffff?text=Productos+Lácteos+Boaco",
+                places: "<strong>Cerro de la Vieja:</strong> Un lugar con leyendas locales y vistas panorámicas. <strong>Río Malacatoya:</strong> Importante fuente de agua y vida para la región.",
+                traditions: "<strong>Poesía y literatura:</strong> Boaco ha sido cuna de varios poetas y escritores. Sus traditions están muy ligadas a la vida del campo y la ganadería.",
+                dances: "<strong>Bailes campesinos:</strong> Danzas sencillas que representan la vida rural y el trabajo en el campo, generalmente al son de guitarra y violín.",
+                foods: "<strong>Cuajada y productos lácteos:</strong> Como en Chontales, los productos derivados de la leche son la base de su gastronomía. <strong>Guiso de quelite:</strong> Un plato tradicional hecho con una hierba silvestre.",
+                extra_info: "<strong>Geografía:</strong> Terreno montañoso con valles fértiles. <strong>Economía:</strong> Ganadería, agricultura (granos básicos, café) y producción de lácteos. <strong>Municipios destacados:</strong> Boaco, Camoapa, Teustepe."
+             },
+            madriz: {
+                title: "Madriz y el Cañón de Somoto",
+                places_img: "https://images.unsplash.com/photo-1591635593138-251c504d6174?q=80&w=800&auto=format&fit=crop",
+                traditions_img: "https://placehold.co/800x400/e74c3c/ffffff?text=Elaboración+de+Rosquillas",
+                dances_img: "https://placehold.co/800x400/2ecc71/ffffff?text=Música+Norteña",
+                foods_img: "https://placehold.co/800x400/3498db/ffffff?text=Rosquillas+Somoteñas",
+                traditions: "<strong>Elaboración de Rosquillas Somoteñas:</strong> Una tradición artesanal pasada de generación en generación. Estas rosquillas a base de maíz son famosas en todo el país.",
+                dances: "<strong>Polkas y Mazurcas:</strong> La música norteña domina la escena, con bailes en pareja que reflejan la herencia europea mezclada con el sabor local.",
+                foods: "<strong>Rosquillas Somoteñas:</strong> El producto estrella, perfecto para acompañar con café. <strong>Sopa de Frijoles:</strong> Un plato fundamental en la dieta local.",
+                extra_info: "<strong>Geografía:</strong> Terreno montañoso y valles, hogar del Monumento Nacional Cañón de Somoto. <strong>Economía:</strong> Agricultura de granos básicos, ganadería y la producción artesanal de rosquillas. <strong>Municipios destacados:</strong> Somoto, Telpaneca, Palacagüina."
+            },
+            // --- DEPARTAMENTOS AÑADIDOS ---
+            nueva_segovia: {
+                title: "Nueva Segovia, Historia y Pinos",
+                places_img: "https://placehold.co/800x400/9b59b6/ffffff?text=Iglesia+de+Ciudad+Antigua",
+                traditions_img: "https://placehold.co/800x400/1abc9c/ffffff?text=Café+de+Dipilto",
+                dances_img: "https://placehold.co/800x400/f1c40f/ffffff?text=Polkas+y+Vales",
+                foods_img: "https://placehold.co/800x400/e67e22/ffffff?text=Tamales+Pisques",
+                places: "<strong>Ciudad Antigua:</strong> Uno de los asentamientos españoles más antiguos de Nicaragua, con una iglesia histórica. <strong>Dipilto:</strong> Región conocida por su café de alta calidad y sus pinares.",
+                traditions: "<strong>Historia colonial y revolucionaria:</strong> La región fue escenario de importantes eventos históricos, desde la colonia hasta la lucha de Sandino. La producción de café de especialidad es una tradición moderna.",
+                dances: "<strong>Música norteña:</strong> Al igual que sus vecinos, las polkas, mazurcas y valses son los bailes predominantes en las celebraciones.",
+                foods: "<strong>Café de Dipilto:</strong> Reconocido internacionalmente por su calidad. <strong>Tamales pisques:</strong> Tamales de maíz sin relleno de carne, acompañados de salsa o frijoles.",
+                extra_info: "<strong>Geografía:</strong> Fronterizo con Honduras, caracterizado por sus montañas y bosques de pino. <strong>Economía:</strong> Producción de café de altura, granos básicos y tabaco. <strong>Municipios destacados:</strong> Ocotal, Jalapa, Quilalí."
+            },
+            rio_san_juan: {
+                title: "Río San Juan, Reserva de Biosfera",
+                places_img: "https://placehold.co/800x400/34495e/ffffff?text=Castillo+de+la+Inmaculada",
+                traditions_img: "https://images.unsplash.com/photo-1568605117036-5fe5e7185743?q=80&w=800&auto=format&fit=crop",
+                dances_img: "https://placehold.co/800x400/c0392b/ffffff?text=Palo+de+Mayo+(influencia)",
+                foods_img: "https://placehold.co/800x400/8e44ad/ffffff?text=Pescado+de+Río",
+                places: "<strong>Castillo de la Inmaculada Concepción:</strong> Fortaleza española contra piratas. <strong>Reserva Biológica Indio Maíz:</strong> Una de las selvas tropicales mejor conservadas. <strong>Archipiélago de Solentiname:</strong> Islas famosas por su comunidad de artistas primitivistas.",
+                traditions: "<strong>Vida ribereña:</strong> Las traditions giran en torno al río, la pesca y la conservación. La artesanía de Solentiname es una expresión cultural única.",
+                dances: "<strong>Palo de Mayo (influencia):</strong> Aunque es de la Costa Caribe, su influencia se siente en la región por la cercanía cultural y geográfica.",
+                foods: "<strong>Pescado de río frito:</strong> Generalmente guapote o sábalo real. <strong>Gaspar en Caldillo:</strong> Un pez prehistórico preparado en una sopa tradicional.",
+                extra_info: "<strong>Geografía:</strong> Dominado por el Río San Juan, vastas selvas tropicales y humedales. <strong>Economía:</strong> Ecoturismo, ganadería, agricultura (cacao, palma africana). <strong>Municipios destacados:</strong> San Carlos, El Castillo, San Juan de Nicaragua."
+            },
+            caribe_norte: {
+                title: "Costa Caribe Norte, Corazón Miskito",
+                places_img: "https://placehold.co/800x400/2980b9/ffffff?text=Cayos+Miskitos",
+                traditions_img: "https://placehold.co/800x400/27ae60/ffffff?text=Comunidad+Miskita",
+                dances_img: "https://placehold.co/800x400/d35400/ffffff?text=Palo+de+Mayo",
+                foods_img: "https://placehold.co/800x400/bdc3c7/ffffff?text=Rondón",
+                places: "<strong>Bilwi (Puerto Cabezas):</strong> La ciudad más importante y centro administrativo. <strong>Cayos Miskitos:</strong> Un conjunto de islas y cayos con una biodiversidad marina impresionante.",
+                traditions: "<strong>Cultura Miskita, Mayangna y Afrodescendiente:</strong> Una región multiétnica con sus propias lenguas, creencias y formas de organización social.",
+                dances: "<strong>Palo de Mayo:</strong> Un baile sensual y enérgico que celebra la fertilidad y la llegada de la temporada de lluvias, con raíces afrocaribeñas.",
+                foods: "<strong>Rondón (Rundown):</strong> Guiso a base de leche de coco con pescado, mariscos, yuca y plátano. <strong>Gallopinto con coco:</strong> El platillo nacional con el toque caribeño.",
+                extra_info: "<strong>Geografía:</strong> La región autónoma más grande del país, con extensas selvas y costas. <strong>Economía:</strong> Pesca, minería y recursos forestales. <strong>Municipios destacados:</strong> Bilwi, Waspán, Siuna."
+            },
+            caribe_sur: {
+                title: "Costa Caribe Sur, Sabor Afrocaribeño",
+                places_img: "https://images.unsplash.com/photo-1598453434435-866249915833?q=80&w=800&auto=format&fit=crop",
+                traditions_img: "https://placehold.co/800x400/16a085/ffffff?text=Cultura+Creole",
+                dances_img: "https://placehold.co/800x400/f39c12/ffffff?text=Festival+de+Palo+de+Mayo",
+                foods_img: "https://placehold.co/800x400/7f8c8d/ffffff?text=Pan+de+Coco",
+                places: "<strong>Bluefields:</strong> La capital regional. <strong>Corn Islands (Islas del Maíz):</strong> Dos islas paradisíacas con playas de arena blanca y aguas turquesas. <strong>Laguna de Perlas:</strong> Hermosa laguna costera con comunidades creoles.",
+                traditions: "<strong>Cultura Creole:</strong> Fuerte influencia de la cultura afrodescendiente de habla inglesa. El festival de Palo de Mayo es la celebración más importante.",
+                dances: "<strong>Palo de Mayo:</strong> Es el epicentro de esta celebración. El baile es una expresión vibrante de la identidad cultural creole.",
+                foods: "<strong>Rondón:</strong> Al igual que en el norte, es el plato emblemático. <strong>Pan de coco (Coconut bread):</strong> Un pan suave y delicioso. <strong>Patí:</strong> Empanada horneada rellena de carne con chile.",
+                extra_info: "<strong>Geografía:</strong> Costas, lagunas costeras y las paradisíacas Corn Islands. <strong>Economía:</strong> Pesca (mariscos), turismo y agricultura (palma africana). <strong>Municipios destacados:</strong> Bluefields, Corn Island, Nueva Guinea."
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const mobileDepartmentList = document.getElementById('mobile-department-list');
+            const departmentContentContainer = document.getElementById('department-content-container');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const dropdownButton = document.getElementById('dropdown-button');
+            const dropdownMenu = document.getElementById('dropdown-menu');
+            const homeLink = document.getElementById('home-link'); // Added variable for home link
+
+            function showSection(sectionId) {
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                const activeSection = document.getElementById(sectionId);
+                if (activeSection) {
+                    activeSection.classList.add('active');
+                }
+                window.scrollTo(0, 0); // Vuelve al inicio de la página
+            }
+
+            // Populate menus and content sections
+            departments.forEach(dept => {
+                // Desktop menu link
+                const link = document.createElement('a');
+                link.href = '#';
+                link.className = 'department-link block px-4 py-2 text-sm text-slate-700 hover:bg-blue-600 hover:text-white rounded-md transition-colors';
+                link.dataset.id = dept.id;
+                link.textContent = dept.name;
+                // Add null check for dropdownMenu
+                if (dropdownMenu) {
+                    dropdownMenu.appendChild(link);
+                } else {
+                    console.error("Element with ID 'dropdown-menu' not found.");
+                }
+
+
+                // Mobile menu link
+                const mobileLink = link.cloneNode(true);
+                mobileLink.className = 'department-link block py-1.5 text-slate-600 hover:text-blue-700 hover:bg-slate-100 rounded-md transition-colors';
+                 // Add null check for mobileDepartmentList
+                if (mobileDepartmentList) {
+                    mobileDepartmentList.appendChild(mobileLink);
+                } else {
+                     console.error("Element with ID 'mobile-department-list' not found.");
+                }
+
+
+                // Create content section
+                const data = departmentData[dept.id];
+                if (data) {
+                    const section = document.createElement('section');
+                    section.id = dept.id;
+                    section.className = 'content-section';
+                    section.innerHTML = `
+                        <div class="bg-white p-4 md:p-8 rounded-xl shadow-lg">
+                            <h1 class="text-4xl md:text-5xl font-extrabold text-blue-800 mb-2">${data.title}</h1>
+                            <p class="text-slate-500 mb-8">Un vistazo a la cultura y tesoros de este departamento.</p>
+                             <div class="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-r-lg mb-6">
+                                ${data.extra_info}
+                             </div>
+                            <div class="grid md:grid-cols-2 gap-6 text-left">
+                                <!-- Card: Lugares -->
+                                <div class="bg-slate-50 rounded-lg border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                                    <img src="${data.places_img}" onerror="this.onerror=null;this.src='https://placehold.co/800x400/cccccc/ffffff?text=Imagen+no+disponible';" alt="Imagen de lugares históricos de ${dept.name}" class="w-full h-48 object-cover rounded-t-lg">
+                                    <div class="p-6 flex-grow">
+                                        <div class="flex items-center mb-3">
+                                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                            <h2 class="text-2xl font-bold text-slate-800 ml-3">Lugares Históricos</h2>
+                                        </div>
+                                        <p class="text-slate-600 leading-relaxed">${data.places}</p>
+                                    </div>
+                                </div>
+                                <!-- Card: Tradiciones -->
+                                <div class="bg-slate-50 rounded-lg border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                                     <img src="${data.traditions_img}" onerror="this.onerror=null;this.src='https://placehold.co/800x400/cccccc/ffffff?text=Imagen+no+disponible';" alt="Imagen de traditions de ${dept.name}" class="w-full h-48 object-cover rounded-t-lg">
+                                     <div class="p-6 flex-grow">
+                                        <div class="flex items-center mb-3">
+                                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                            <h2 class="text-2xl font-bold text-slate-800 ml-3">Tradiciones</h2>
+                                        </div>
+                                        <p class="text-slate-600 leading-relaxed">${data.traditions}</p>
+                                     </div>
+                                </div>
+                                <!-- Card: Bailes -->
+                                <div class="bg-slate-50 rounded-lg border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                                    <img src="${data.dances_img}" onerror="this.onerror=null;this.src='https://placehold.co/800x400/cccccc/ffffff?text=Imagen+no+disponible';" alt="Imagen de bailes típicos de ${dept.name}" class="w-full h-48 object-cover rounded-t-lg">
+                                    <div class="p-6 flex-grow">
+                                        <div class="flex items-center mb-3">
+                                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 6l12-3"></path></svg>
+                                            <h2 class="text-2xl font-bold text-slate-800 ml-3">Bailes Típicos</h2>
+                                        </div>
+                                        <p class="text-slate-600 leading-relaxed">${data.dances}</p>
+                                    </div>
+                                </div>
+                                <!-- Card: Comidas -->
+                                <div class="bg-slate-50 rounded-lg border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                                     <img src="${data.foods_img}" onerror="this.onerror=null;this.src='https://placehold.co/800x400/cccccc/ffffff?text=Imagen+no+disponible';" alt="Imagen de comidas típicas de ${dept.name}" class="w-full h-48 object-cover rounded-t-lg">
+                                     <div class="p-6 flex-grow">
+                                        <div class="flex items-center mb-3">
+                                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m16-4l-3-6H6L3 11m18 0h-5.04M5 11H3m4-6V3a1 1 0 011-1h6a1 1 0 011 1v2M7 11h10"></path></svg>
+                                            <h2 class="text-2xl font-bold text-slate-800 ml-3">Comidas Típicas</h2>
+                                        </div>
+                                        <p class="text-slate-600 leading-relaxed">${data.foods}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    // Add null check for departmentContentContainer
+                    if (departmentContentContainer) {
+                        departmentContentContainer.appendChild(section);
+                    } else {
+                        console.error("Element with ID 'department-content-container' not found.");
+                    }
+
+                }
+            });
+
+            // --- EVENT LISTENERS ---
+
+            // Dropdown Menu Toggle (Desktop) - Added Null Check
+            if (dropdownButton && dropdownMenu) {
+                dropdownButton.addEventListener('click', function (e) {
+                    e.stopPropagation(); // Prevent click from closing menu immediately
+                    dropdownMenu.classList.toggle('open');
+                });
+            } else {
+                console.error("Dropdown button or menu not found.");
+            }
+
+
+            // Close dropdown when clicking outside - Added Null Checks
+            document.addEventListener('click', function (e) {
+                 if (dropdownMenu && dropdownButton && dropdownMenu.classList.contains('open') && !dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    dropdownMenu.classList.remove('open');
+                }
+            });
+
+            // Event Listeners for department links
+            document.querySelectorAll('.department-link').forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const departmentId = this.dataset.id;
+                    showSection(departmentId);
+                    // Add null checks before modifying classList
+                    if(mobileMenu) mobileMenu.classList.add('hidden'); // Ocultar menú móvil
+                    if(dropdownMenu) dropdownMenu.classList.remove('open'); // Ocultar menú desktop
+                });
+            });
+
+            // Event Listeners for main navigation links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const sectionId = e.currentTarget.dataset.section;
+                    showSection(sectionId);
+                     // Add null check before modifying classList
+                    if(mobileMenu) mobileMenu.classList.add('hidden');
+                });
+            });
+
+             // Home link listener - Added Null Check
+             if (homeLink) {
+                 homeLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showSection('inicio');
+                    // Add null check before modifying classList
+                    if(mobileMenu) mobileMenu.classList.add('hidden');
+                });
+             } else {
+                 console.error("Home link element not found.");
+             }
+
+
+            // Mobile menu toggle - Added Null Checks
+            if (mobileMenuButton && mobileMenu) {
+                mobileMenuButton.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            } else {
+                console.error("Mobile menu button or menu element not found.");
+            }
+
+        });
+
+    </script>
+</body>
+</html>
+
